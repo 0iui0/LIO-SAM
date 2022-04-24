@@ -27,7 +27,7 @@ using symbol_shorthand::G; // GPS pose
 /*
     * A point cloud type that has 6D pose info ([x,y,z,roll,pitch,yaw] intensity is time stamp)
     */
-struct PointXYZIRPYT
+struct EIGEN_ALIGN16 PointXYZIRPYT
 {
     PCL_ADD_POINT4D
     PCL_ADD_INTENSITY;                  // preferred way of adding a XYZ+padding
@@ -36,7 +36,7 @@ struct PointXYZIRPYT
     float yaw;
     double time;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned
-} EIGEN_ALIGN16;                    // enforce SSE padding for correct memory alignment
+};                    // enforce SSE padding for correct memory alignment
 
 POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIRPYT,
                                    (float, x, x) (float, y, y)

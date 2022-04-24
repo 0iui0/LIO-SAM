@@ -1,20 +1,20 @@
 #include "utility.h"
 #include "lio_sam/cloud_info.h"
 
-struct VelodynePointXYZIRT
+struct EIGEN_ALIGN16 VelodynePointXYZIRT
 {
     PCL_ADD_POINT4D
     PCL_ADD_INTENSITY;
     uint16_t ring;
     float time;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
+};
 POINT_CLOUD_REGISTER_POINT_STRUCT (VelodynePointXYZIRT,
     (float, x, x) (float, y, y) (float, z, z) (float, intensity, intensity)
     (uint16_t, ring, ring) (float, time, time)
 )
 
-struct OusterPointXYZIRT {
+struct EIGEN_ALIGN16 OusterPointXYZIRT {
     PCL_ADD_POINT4D;
     float intensity;
     uint32_t t;
@@ -23,7 +23,7 @@ struct OusterPointXYZIRT {
     uint16_t noise;
     uint32_t range;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
+};
 POINT_CLOUD_REGISTER_POINT_STRUCT(OusterPointXYZIRT,
     (float, x, x) (float, y, y) (float, z, z) (float, intensity, intensity)
     (uint32_t, t, t) (uint16_t, reflectivity, reflectivity)
