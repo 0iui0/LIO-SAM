@@ -10,11 +10,14 @@
 #include "utility.h"
 #include "lio_sam/cloud_info.h"
 
-struct smoothness_t{ 
+struct smoothness_t{
+    // 曲率值
     float value;
+    // 激光点一维索引
     size_t ind;
 };
 
+// 曲率由小到大排列
 struct by_value{ 
     bool operator()(smoothness_t const &left, smoothness_t const &right) { 
         return left.value < right.value;
@@ -26,12 +29,17 @@ class FeatureExtraction : public ParamServer
 
 public:
 
+    // 当前激光帧畸变校正之后的点云信息
     ros::Subscriber subLaserCloudInfo;
 
+    // 当前激光帧提取特征之后的点云信息
     ros::Publisher pubLaserCloudInfo;
+    // 当前激光帧的角点点云
     ros::Publisher pubCornerPoints;
+    // 当前激光帧的面点点云
     ros::Publisher pubSurfacePoints;
 
+    // 当前激光帧运动畸变校正以后的有效点云
     pcl::PointCloud<PointType>::Ptr extractedCloud;
     pcl::PointCloud<PointType>::Ptr cornerCloud;
     pcl::PointCloud<PointType>::Ptr surfaceCloud;
@@ -41,9 +49,12 @@ public:
     lio_sam::cloud_info cloudInfo;
     std_msgs::Header cloudHeader;
 
+    // 当前帧激光点云的曲率
     std::vector<smoothness_t> cloudSmoothness;
     float *cloudCurvature;
+    // 特征提取标记：1表示遮挡、平行，或者已经提取了；0表示还未提取
     int *cloudNeighborPicked;
+    // 1表示角点；-1表示平面点
     int *cloudLabel;
 
     FeatureExtraction()
@@ -87,6 +98,7 @@ public:
         publishFeatureCloud();
     }
 
+    // 计算当前激光帧点云中每个点的曲率
     void calculateSmoothness()
     {
         int cloudSize = extractedCloud->points.size();
@@ -109,6 +121,7 @@ public:
         }
     }
 
+    // 标记属于遮挡、平行的点，不做特征提取
     void markOccludedPoints()
     {
         int cloudSize = extractedCloud->points.size();
@@ -147,6 +160,7 @@ public:
         }
     }
 
+    // 点云角点、面点特征提取
     void extractFeatures()
     {
         cornerCloud->clear();
