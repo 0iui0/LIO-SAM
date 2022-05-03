@@ -1,3 +1,16 @@
+/*
+ * Subscribe to:
+ *      imu data
+ *      imu odometry data
+ *      point cloud
+ * Main function:
+ *      Get transformation initial guess
+ *      Organize point cloud
+ *      Deskew point cloud
+ * Publish:
+ *      cloud_info message
+ * */
+
 #include "utility.h"
 #include "lio_sam/cloud_info.h"
 
@@ -146,6 +159,7 @@ public:
 
     ~ImageProjection(){}
 
+    // 订阅原始imu数据，转换格式、放入imuQueue
     void imuHandler(const sensor_msgs::Imu::ConstPtr& imuMsg)
     {
         sensor_msgs::Imu thisImu = imuConverter(*imuMsg);
@@ -171,22 +185,27 @@ public:
         // cout << "roll: " << imuRoll << ", pitch: " << imuPitch << ", yaw: " << imuYaw << endl << endl;
     }
 
+    // 来自imuPreintegration的imu里程计数据
     void odometryHandler(const nav_msgs::Odometry::ConstPtr& odometryMsg)
     {
         std::lock_guard<std::mutex> lock2(odoLock);
         odomQueue.push_back(*odometryMsg);
     }
 
+    // 激光点云运动畸变校正、位姿初始化
     void cloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
     {
         if (!cachePointCloud(laserCloudMsg))
             return;
 
+        // imu和odom校正
         if (!deskewInfo())
             return;
 
+        // 投影到range image
         projectPointCloud();
 
+        // 点云抽取
         cloudExtraction();
 
         publishClouds();

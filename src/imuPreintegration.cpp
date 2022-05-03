@@ -1,3 +1,13 @@
+/*
+ * Subscribe to:
+ *      imu data
+ *      lidar odometry
+ * Main function:
+ *      Graph optimization
+ *      Estimate IMU bias
+ * Publish:
+ *      IMU Odometry
+ * */
 #include "utility.h"
 
 #include <gtsam/geometry/Rot3.h>

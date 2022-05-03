@@ -1,3 +1,15 @@
+/*
+ * Subscribe to:
+ *      feature cloud_info message
+ *      GPS
+ * Main function:
+ *      Register point cloud
+ *      Get lidar odometry
+ *      Graph optimization
+ * Publish:
+ *      Lidar Odometry
+ * */
+
 #include "utility.h"
 #include "lio_sam/cloud_info.h"
 #include "lio_sam/save_map.h"
