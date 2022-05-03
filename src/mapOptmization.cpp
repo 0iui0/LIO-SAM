@@ -350,20 +350,6 @@ public:
         return thisPose6D;
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
     bool saveMapService(lio_sam::save_mapRequest& req, lio_sam::save_mapResponse& res)
     {
       string saveMapDirectory;
@@ -501,17 +487,6 @@ public:
         publishCloud(pubLaserCloudSurround, globalMapKeyFramesDS, timeLaserInfoStamp, odometryFrame);
     }
 
-
-
-
-
-
-
-
-
-
-
-
     void loopClosureThread()
     {
         if (loopClosureEnableFlag == false)
@@ -538,6 +513,14 @@ public:
             loopInfoVec.pop_front();
     }
 
+    /**
+     * 闭环线程
+     * 1、闭环scan-to-map，icp优化位姿
+     *   1) 在历史关键帧中查找与当前关键帧距离最近的关键帧集合，选择时间相隔较远的一帧作为候选闭环帧
+     *   2) 提取当前关键帧特征点集合，降采样；提取闭环匹配关键帧前后相邻若干帧的关键帧特征点集合，降采样
+     *   3) 执行scan-to-map优化，调用icp方法，得到优化后位姿，构造闭环因子需要的数据，在因子图优化中一并加入更新位姿
+     * 2、rviz展示闭环边
+     */
     void performLoopClosure()
     {
         if (cloudKeyPoses3D->points.empty() == true)
@@ -619,6 +602,9 @@ public:
         loopIndexContainer[loopKeyCur] = loopKeyPre;
     }
 
+    /**
+     * 在历史关键帧中查找与当前关键帧距离最近的关键帧集合，选择时间相隔较远的一帧作为候选闭环帧
+     */
     bool detectLoopClosureDistance(int *latestID, int *closestID)
     {
         int loopKeyCur = copy_cloudKeyPoses3D->size() - 1;
@@ -708,6 +694,9 @@ public:
         return true;
     }
 
+    /**
+     * 提取key索引的关键帧前后相邻若干帧的关键帧特征点集合，降采样
+     */
     void loopFindNearKeyframes(pcl::PointCloud<PointType>::Ptr& nearKeyframes, const int& key, const int& searchNum)
     {
         // extract near keyframes
@@ -785,16 +774,11 @@ public:
         pubLoopConstraintEdge.publish(markerArray);
     }
 
-
-
-
-
-
-
-    
-
-
-
+    /**
+     * 当前帧位姿初始化
+     * 1、如果是第一帧，用原始imu数据的RPY初始化当前帧位姿（旋转部分）
+     * 2、后续帧，用imu里程计计算两帧之间的增量位姿变换，作用于前一帧的激光位姿，得到当前帧激光位姿
+    */
     void updateInitialGuess()
     {
         // save current transformation before any processing
@@ -871,6 +855,11 @@ public:
         extractCloud(cloudToExtract);
     }
 
+    /**
+     * 提取局部角点、平面点云集合，加入局部map
+     * 1、对最近的一帧关键帧，搜索时空维度上相邻的关键帧集合，降采样一下
+     * 2、对关键帧集合中的每一帧，提取对应的角点、平面点，加入局部map中
+     */
     void extractNearby()
     {
         pcl::PointCloud<PointType>::Ptr surroundingKeyPoses(new pcl::PointCloud<PointType>());
@@ -908,6 +897,9 @@ public:
         extractCloud(surroundingKeyPosesDS);
     }
 
+    /**
+     * 将相邻关键帧集合对应的角点、平面点，加入到局部map中，作为scan-to-map匹配的局部点云地图
+     */
     void extractCloud(pcl::PointCloud<PointType>::Ptr cloudToExtract)
     {
         // fuse the map
@@ -949,6 +941,11 @@ public:
             laserCloudMapContainer.clear();
     }
 
+    /**
+     * 提取局部角点、平面点云集合，加入局部map
+     * 1、对最近的一帧关键帧，搜索时空维度上相邻的关键帧集合，降采样一下
+     * 2、对关键帧集合中的每一帧，提取对应的角点、平面点，加入局部map中
+     */
     void extractSurroundingKeyFrames()
     {
         if (cloudKeyPoses3D->points.empty() == true)
@@ -983,6 +980,11 @@ public:
         transPointAssociateToMap = trans2Affine3f(transformTobeMapped);
     }
 
+    /**
+     * 当前激光帧角点寻找局部map匹配点
+     * 1、更新当前帧位姿，将当前帧角点坐标变换到map系下，在局部map中查找5个最近点，距离小于1m，且5个点构成直线（用距离中心点的协方差矩阵，特征值进行判断），则认为匹配上了
+     * 2、计算当前帧角点到直线的距离、垂线的单位向量，存储为角点参数
+     */
     void cornerOptimization()
     {
         updatePointAssociateToMap();
@@ -1075,6 +1077,11 @@ public:
         }
     }
 
+    /**
+     * 当前激光帧平面点寻找局部map匹配点
+     * 1、更新当前帧位姿，将当前帧平面点坐标变换到map系下，在局部map中查找5个最近点，距离小于1m，且5个点构成平面（最小二乘拟合平面），则认为匹配上了
+     * 2、计算当前帧平面点到平面的距离、垂线的单位向量，存储为平面点参数
+     */
     void surfOptimization()
     {
         updatePointAssociateToMap();
@@ -1146,6 +1153,9 @@ public:
         }
     }
 
+    /**
+     * 提取当前帧中与局部map匹配上了的角点、平面点，加入同一集合
+     */
     void combineOptimizationCoeffs()
     {
         // combine corner coeffs
@@ -1167,6 +1177,11 @@ public:
         std::fill(laserCloudOriSurfFlag.begin(), laserCloudOriSurfFlag.end(), false);
     }
 
+    /**
+     * scan-to-map优化
+     * 对匹配特征点计算Jacobian矩阵，观测值为特征点到直线、平面的距离，构建高斯牛顿方程，迭代优化当前位姿，存transformTobeMapped
+     * 公式推导：todo
+     */
     bool LMOptimization(int iterCount)
     {
         // This optimization is from the original loam_velodyne by Ji Zhang, need to cope with coordinate transformation
@@ -1291,6 +1306,20 @@ public:
         return false; // keep optimizing
     }
 
+    /**
+     * scan-to-map优化当前帧位姿
+     * 1、要求当前帧特征点数量足够多，且匹配的点数够多，才执行优化
+     * 2、迭代30次（上限）优化
+     *   1) 当前激光帧角点寻找局部map匹配点
+     *      a.更新当前帧位姿，将当前帧角点坐标变换到map系下，在局部map中查找5个最近点，距离小于1m，且5个点构成直线（用距离中心点的协方差矩阵，特征值进行判断），则认为匹配上了
+     *      b.计算当前帧角点到直线的距离、垂线的单位向量，存储为角点参数
+     *   2) 当前激光帧平面点寻找局部map匹配点
+     *      a.更新当前帧位姿，将当前帧平面点坐标变换到map系下，在局部map中查找5个最近点，距离小于1m，且5个点构成平面（最小二乘拟合平面），则认为匹配上了
+     *      b.计算当前帧平面点到平面的距离、垂线的单位向量，存储为平面点参数
+     *   3) 提取当前帧中与局部map匹配上了的角点、平面点，加入同一集合
+     *   4) 对匹配特征点计算Jacobian矩阵，观测值为特征点到直线、平面的距离，构建高斯牛顿方程，迭代优化当前位姿，存transformTobeMapped
+     * 3、用imu原始RPY数据与scan-to-map优化后的位姿进行加权融合，更新当前帧位姿的roll、pitch，约束z坐标
+     */
     void scan2MapOptimization()
     {
         if (cloudKeyPoses3D->points.empty())
@@ -1321,6 +1350,9 @@ public:
         }
     }
 
+    /**
+     * 用imu原始RPY数据与scan-to-map优化后的位姿进行加权融合，更新当前帧位姿的roll、pitch，约束z坐标
+     */
     void transformUpdate()
     {
         if (cloudInfo.imuAvailable == true)
@@ -1363,24 +1395,25 @@ public:
         return value;
     }
 
+    /**
+     * 计算当前帧与前一帧位姿变换，如果变化太小，不设为关键帧，反之设为关键帧
+     */
     bool saveFrame()
     {
         if (cloudKeyPoses3D->points.empty())
             return true;
 
-        if (sensor == SensorType::LIVOX)
-        {
-            if (timeLaserInfoCur - cloudKeyPoses6D->back().time > 1.0)
-                return true;
-        }
-
+        // 前一帧位姿
         Eigen::Affine3f transStart = pclPointToAffine3f(cloudKeyPoses6D->back());
-        Eigen::Affine3f transFinal = pcl::getTransformation(transformTobeMapped[3], transformTobeMapped[4], transformTobeMapped[5], 
+        // 当前帧位姿
+        Eigen::Affine3f transFinal = pcl::getTransformation(transformTobeMapped[3], transformTobeMapped[4], transformTobeMapped[5],
                                                             transformTobeMapped[0], transformTobeMapped[1], transformTobeMapped[2]);
+        // 位姿变换增量
         Eigen::Affine3f transBetween = transStart.inverse() * transFinal;
         float x, y, z, roll, pitch, yaw;
         pcl::getTranslationAndEulerAngles(transBetween, x, y, z, roll, pitch, yaw);
 
+        // 旋转和平移量都较小，当前帧不设为关键帧
         if (abs(roll)  < surroundingkeyframeAddingAngleThreshold &&
             abs(pitch) < surroundingkeyframeAddingAngleThreshold && 
             abs(yaw)   < surroundingkeyframeAddingAngleThreshold &&
@@ -1506,6 +1539,14 @@ public:
         aLoopIsClosed = true;
     }
 
+    /**
+     * 设置当前帧为关键帧并执行因子图优化
+     * 1、计算当前帧与前一帧位姿变换，如果变化太小，不设为关键帧，反之设为关键帧
+     * 2、添加激光里程计因子、GPS因子、闭环因子
+     * 3、执行因子图优化
+     * 4、得到当前帧优化后位姿，位姿协方差
+     * 5、添加cloudKeyPoses3D，cloudKeyPoses6D，更新transformTobeMapped，添加当前关键帧的角点、平面点集合
+     */
     void saveKeyFramesAndFactor()
     {
         if (saveFrame() == false)
@@ -1592,6 +1633,9 @@ public:
         updatePath(thisPose6D);
     }
 
+    /**
+     * 更新因子图中所有变量节点的位姿，也就是所有历史关键帧的位姿，更新里程计轨迹
+     */
     void correctPoses()
     {
         if (cloudKeyPoses3D->points.empty())
