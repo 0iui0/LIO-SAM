@@ -1,11 +1,11 @@
-/*
+/**
  * Subscribe to:
  *      cloud_info message
  * Main function:
  *      Extract edge and planar feature
  * Publish:
  *      feature cloud_info message
- * */
+ */
 
 #include "utility.h"
 #include "lio_sam/cloud_info.h"

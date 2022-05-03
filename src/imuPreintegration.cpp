@@ -1,4 +1,4 @@
-/*
+/**
  * Subscribe to:
  *      imu data
  *      lidar odometry
@@ -7,7 +7,7 @@
  *      Estimate IMU bias
  * Publish:
  *      IMU Odometry
- * */
+ */
 #include "utility.h"
 
 #include <gtsam/geometry/Rot3.h>
@@ -30,11 +30,11 @@ using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 using gtsam::symbol_shorthand::V; // Vel   (xdot,ydot,zdot)
 using gtsam::symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
 
-/*
+/**
  * 订阅激光里程计（来自MapOptimization）和IMU里程计，
  * 根据前一时刻激光里程计，和该时刻到当前时刻的IMU里程计变换增量，计算当前时刻IMU里程计；
  * rviz展示IMU里程计轨迹（局部）。
- * */
+ */
 class TransformFusion : public ParamServer
 {
 public:
@@ -186,10 +186,10 @@ public:
     }
 };
 
-/*
+/**
  * 用激光里程计，两帧激光里程计之间的IMU预计分量构建因子图，优化当前帧的状态（包括位姿、速度、偏置）;
  * 以优化后的状态为基础，施加IMU预计分量，得到每一时刻的IMU里程计。
- * */
+ */
 class IMUPreintegration : public ParamServer
 {
 public:

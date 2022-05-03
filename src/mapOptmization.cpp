@@ -1,4 +1,4 @@
-/*
+/**
  * Subscribe to:
  *      feature cloud_info message
  *      GPS
@@ -8,7 +8,7 @@
  *      Graph optimization
  * Publish:
  *      Lidar Odometry
- * */
+ */
 
 #include "utility.h"
 #include "lio_sam/cloud_info.h"

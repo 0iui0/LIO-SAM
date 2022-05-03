@@ -1,4 +1,4 @@
-/*
+/**
  * Subscribe to:
  *      imu data
  *      imu odometry data
@@ -9,7 +9,7 @@
  *      Get transformation initial guess
  * Publish:
  *      cloud_info message
- * */
+ */
 
 #include "utility.h"
 #include "lio_sam/cloud_info.h"
