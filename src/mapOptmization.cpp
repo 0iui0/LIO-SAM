@@ -1477,7 +1477,7 @@ public:
                 nav_msgs::Odometry thisGPS = gpsQueue.front();
                 gpsQueue.pop_front();
 
-                // GPS too noisy, skip
+                // GPS too noisy, skip GPS噪声太大就舍弃
                 float noise_x = thisGPS.pose.covariance[0];
                 float noise_y = thisGPS.pose.covariance[7];
                 float noise_z = thisGPS.pose.covariance[14];
@@ -1507,6 +1507,7 @@ public:
                 else
                     lastGPSPoint = curGPSPoint;
 
+                // 添加GPS因子，gtsam已经封装好了
                 gtsam::Vector Vector3(3);
                 Vector3 << max(noise_x, 1.0f), max(noise_y, 1.0f), max(noise_z, 1.0f);
                 noiseModel::Diagonal::shared_ptr gps_noise = noiseModel::Diagonal::Variances(Vector3);
@@ -1564,7 +1565,7 @@ public:
         // cout << "****************************************************" << endl;
         // gtSAMgraph.print("GTSAM Graph:\n");
 
-        // update iSAM
+        // update iSAM gtsam位姿图优化
         isam->update(gtSAMgraph, initialEstimate);
         isam->update();
 
