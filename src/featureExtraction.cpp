@@ -185,6 +185,8 @@ public:
                 std::sort(cloudSmoothness.begin()+sp, cloudSmoothness.begin()+ep, by_value());
 
                 int largestPickedNum = 0;
+
+                // 从大到小找cornerCloud
                 for (int k = ep; k >= sp; k--)
                 {
                     int ind = cloudSmoothness[k].ind;
@@ -216,6 +218,7 @@ public:
                     }
                 }
 
+                // 从小到大标记surfaceCloud cloudLabel[ind] = -1
                 for (int k = sp; k <= ep; k++)
                 {
                     int ind = cloudSmoothness[k].ind;
@@ -225,6 +228,7 @@ public:
                         cloudLabel[ind] = -1;
                         cloudNeighborPicked[ind] = 1;
 
+                        // 左右各5个点判断距离若小于等于10则认为距离太近跳过，不在这些都附近选，避免过于密集
                         for (int l = 1; l <= 5; l++) {
 
                             int columnDiff = std::abs(int(cloudInfo.pointColInd[ind + l] - cloudInfo.pointColInd[ind + l - 1]));
@@ -244,6 +248,7 @@ public:
                     }
                 }
 
+                // cloudLabel[ind] = -1 和剩下的 cloudLabel[ind] = 0的都是surfaceCloudScan
                 for (int k = sp; k <= ep; k++)
                 {
                     if (cloudLabel[k] <= 0){
@@ -252,6 +257,7 @@ public:
                 }
             }
 
+            // surfaceCloudScan降采样surfaceCloud
             surfaceCloudScanDS->clear();
             downSizeFilter.setInputCloud(surfaceCloudScan);
             downSizeFilter.filter(*surfaceCloudScanDS);
