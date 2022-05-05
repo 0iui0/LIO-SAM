@@ -297,6 +297,7 @@ public:
         systemInitialized = false;
     }
 
+    // 关键帧之间添加imu预积分约束
     void odometryHandler(const nav_msgs::Odometry::ConstPtr& odomMsg)
     {
         std::lock_guard<std::mutex> lock(mtx);
@@ -320,7 +321,7 @@ public:
         gtsam::Pose3 lidarPose = gtsam::Pose3(gtsam::Rot3::Quaternion(r_w, r_x, r_y, r_z), gtsam::Point3(p_x, p_y, p_z));
 
 
-        // 0. initialize system，第一帧
+        // 0. initialize system，初始化的时候，第一帧设置为fix （PriorFactor），把第一帧初始化好。 priorPose、priorVel 、priorBias（ConstantBias）
         if (systemInitialized == false)
         {
             resetOptimization();
@@ -367,7 +368,7 @@ public:
         }
 
 
-        // reset graph for speed：每隔100帧激光里程计，重置ISAM2优化器，保证优化效率
+        // reset graph for speed：每隔100帧激光里程计，重置ISAM2优化器，保证优化效率；这里竟然不做边缘化，效果也挺好
         if (key == 100)
         {
             // get updated noise before reset 前一帧的位姿、速度、偏置噪声模型
@@ -406,6 +407,7 @@ public:
             // 提取前一帧与当前帧之间的imu数据，计算预积分
             sensor_msgs::Imu *thisImu = &imuQueOpt.front();
             double imuTime = ROS_TIME(thisImu);
+            // gtsam imu预积分很方便
             if (imuTime < currentCorrectionTime - delta_t)
             {
                 // 两帧imu数据时间间隔
@@ -422,14 +424,14 @@ public:
             else
                 break;
         }
-        // add imu factor to graph （添加imu预积分因子）
+        // add imu factor to graph （添加imu预积分因子） ，因为假设ij之间bias不变，所以只有上一时刻Bi（B（key-1））
         const gtsam::PreintegratedImuMeasurements& preint_imu = dynamic_cast<const gtsam::PreintegratedImuMeasurements&>(*imuIntegratorOpt_);
         gtsam::ImuFactor imu_factor(X(key - 1), V(key - 1), X(key), V(key), B(key - 1), preint_imu);
         graphFactors.add(imu_factor);
-        // add imu bias between factor （添加imu偏置因子：前一帧偏置、当前帧偏置、观测值、噪声协方差） deltaTij是积分段的时间
+        // add imu bias between factor 二元因子 位姿之间、回环之间（添加imu偏置因子：前一帧偏置、当前帧偏置、观测值、噪声协方差） deltaTij是积分段的时间；要体现出Bi和Bj之间的马尔可夫/随机游走过程，noiseModelBetweenBias bias的导数为白噪声
         graphFactors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(key - 1), B(key), gtsam::imuBias::ConstantBias(),
                          gtsam::noiseModel::Diagonal::Sigmas(sqrt(imuIntegratorOpt_->deltaTij()) * noiseModelBetweenBias)));
-        // add pose factor
+        // add pose factor 添加关键帧位姿约束（mapOpt中加了GPS已经得到了地理系下的位姿）
         gtsam::Pose3 curPose = lidarPose.compose(lidar2Imu);
         gtsam::PriorFactor<gtsam::Pose3> pose_factor(X(key), curPose, degenerate ? correctionNoise2 : correctionNoise);
         graphFactors.add(pose_factor);
